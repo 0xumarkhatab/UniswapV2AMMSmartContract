@@ -7,8 +7,6 @@ import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contr
 
 contract UniswapV2AMM{
 
-
-
 // Token Contracts 
 IERC20 private immutable token1;
 IERC20 private immutable token2;
@@ -33,7 +31,7 @@ totalSupply=0;
 
 function _mint(address _to ,uint amount)public {
     balanceOf[_to]+=amount;
-totalSupply+=amount;
+    totalSupply+=amount;
 }
 
 function _burn(address _from,uint amount)public {
@@ -48,7 +46,18 @@ reserve2 = res2;
 
 
 }
+/*
 
+Step1 - Check if the token that user is sending , is a valid token.
+Step2 - Maintain local variables for reserve of tokens to be received( tokenIn)
+        and tokens to be sent to user (tokenOut)
+Step3 - Accept / transfer the tokens from user to the platform / contract.
+Step4 - Calculate the tokensOut to be transferred to the user by incurring interest - 0.03%
+Step5 - Send tokensOut to the user 
+Step6 - Update the reserves
+
+
+*/
 function swap(address _tokenIn,uint amountIn )public returns(uint amountOut){
 
 require(_tokenIn==address(token1) || _tokenIn ==address(token2) ,"Invalid token");
@@ -86,11 +95,23 @@ updateReserves(
 
 }
 
+/*
+Step1 - transfer both tokens sent by the user.
+Step2 - Make sure we have enough reserves for both tokens , say greater than zero
+Step3 - Calculate shares of liquidity tokens to give to the user.
+        -   supply is 0
+            -   mint / give the product amount of tokens of the tokens sent by the user -  amount1 * amount2 
+        -   supply is non-zero
+            -   shares= min(( (dx*TotalSupply)/x ), ( (dy*TotalSupply)/y )
+
+Step4 - mint shares onto address of the user
+Step5 - update reserves
+
+)
+
+*/
 
 function addLiquidity(uint amount1,uint amount2)external {
-
-// require(token1.allowance(address(this))>=amount1,"Token1:Please give allowance to contract first" );
-// require(token2.allowance(address(this))>=amount2,"Token2:Please give allowance to contract first" );
 
 token1.transferFrom(msg.sender,address(this),amount1);
 token2.transferFrom(msg.sender,address(this),amount2);
@@ -117,12 +138,10 @@ if(totalSupply==0){
 
 }else{
 /*
-
  shares= min(
     ( (dx*TotalSupply)/x ),
     ( (dy*TotalSupply)/y )
 )
-
 */
 shares=_min(
      (amount1*totalSupply)/reserve1 ,
@@ -143,6 +162,16 @@ updateReserves(
 
 }
 
+
+/*
+Step1 - calculate the current balance of tokens the contract holds
+Step2 - calculate the total tokens the user will get for both token1 and token2
+Step3 - burn the shares of the user
+Step4 - update reserves
+Step5 - send both tokens to user
+
+
+*/
 function removeLiquidity(uint shares)external {
 require(shares>0 && balanceOf[msg.sender]>=shares,"Invalid Amount of shares");
 
@@ -174,6 +203,7 @@ token2.transfer(msg.sender,amount2);
 
 
 
+/*          Utility function for finding square root of a number*/
 
 function _sqrt(uint y) internal pure returns (uint z) {
     if (y > 3) {
@@ -188,6 +218,7 @@ function _sqrt(uint y) internal pure returns (uint z) {
     }
 }
 
+/*          Utility function for finding minimum of two numbers*/
 
 function _min(uint x,uint y)private returns(uint){
 return x<=y?x:y;
